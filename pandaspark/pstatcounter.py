@@ -29,19 +29,18 @@ class PStatCounter(object):
     """
     A wrapper around StatCounter which collects stats for multiple columns
     """
+    _counters = dict()
+    _columns = []
 
     def __init__(self, dataframes = [], columns = []):
         """
         Creates a stats counter for the provided data frames
-        computing the stats for all of the columns in columns.
-        Parameters
-        ----------
-        dataframes: list of dataframes, containing the values to compute stats on
-        columns: list of strs, list of columns to compute the stats on
+        computing the stats for all of the columns in columns
         """
         self._columns = columns
-        self._counters = dict((column, StatCounter()) for column in columns)
- 
+
+        for column in columns:
+            self._counters[column] = StatCounter()
         for df in dataframes:
             self.merge(df)
 
@@ -77,7 +76,9 @@ class PStatCounter(object):
         return self
 
     def __str__(self):
-        str = ""
+        str = "pc:"
+        for column in self._columns:
+            str += "column: %s\n" % column
         for column, counter in self._counters.items():
             str += "(field: %s,  counters: %s)" % (column, counter)
         return str

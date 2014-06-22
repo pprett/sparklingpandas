@@ -38,9 +38,8 @@ class PStatCounter(object):
         computing the stats for all of the columns in columns
         """
         self._columns = columns
-
-        for column in columns:
-            self._counters[column] = StatCounter()
+        self._counters = {column: StatCounter() for column in columns}
+ 
         for df in dataframes:
             self.merge(df)
 
@@ -76,9 +75,7 @@ class PStatCounter(object):
         return self
 
     def __str__(self):
-        str = "pc:"
-        for column in self._columns:
-            str += "column: %s\n" % column
+        str = ""
         for column, counter in self._counters.items():
             str += "(field: %s,  counters: %s)" % (column, counter)
         return str

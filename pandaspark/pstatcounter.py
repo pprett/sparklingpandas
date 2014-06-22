@@ -39,8 +39,7 @@ class PStatCounter(object):
         dataframes: list of dataframes, containing the values to compute stats on
         columns: list of strs, list of columns to compute the stats on
         """
-        self._columns = columns
-        self._counters = {column: StatCounter() for column in columns}
+        self._counters = {column_name: StatCounter() for column_name in columns}
  
         for df in dataframes:
             self.merge(df)
@@ -56,12 +55,14 @@ class PStatCounter(object):
         >>> PStatCounter([df], columns=['b'])
         (field: b,  counters: (count: 3, mean: 20.0, stdev: 8.16496580928, max: 30, min: 10))
         """
-        for column, values in frame.iteritems():
-            # Temporary hack, fix later
-            counter = self._counters.get(column)
-            for value in values:
-                if counter is not None:
-                    counter.merge(value)
+        for column_name, counter in self._counters:
+            try:
+                series = frame.loc[column_name]
+            except KeyError:
+                # If a df is missing a column, we should be able to just skip it.
+                # But! we shouldn't do it silently... havent decide on the appropriate level of explosion
+
+
 
     def merge_pstats(self, other):
         """

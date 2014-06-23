@@ -21,6 +21,7 @@ Look at the stats() method on PRDD for more info.
 
 from pandaspark.utils import add_pyspark_path, run_tests
 import pandas
+import scipy.stats as scistats
 add_pyspark_path()
 
 from pyspark.statcounter import StatCounter
@@ -57,11 +58,9 @@ class PStatCounter(object):
         """
         for column_name, counter in self._counters:
             try:
-                series = frame.loc[column_name]
+                count, min_max_tup, var, skew, kurt = scistats.describe(frame[[column_name]].values)
             except KeyError:
-                # If a df is missing a column, we should be able to just skip it.
-                # But! we shouldn't do it silently... havent decide on the appropriate level of explosion
-
+                raise KeyError # and stuff
 
 
     def merge_pstats(self, other):

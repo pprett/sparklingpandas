@@ -56,25 +56,19 @@ class PStatCounter(object):
         >>> PStatCounter([df], columns=['b'])
         (field: b,  counters: (count: 3, mean: 20.0, stdev: 8.16496580928, max: 30, min: 10))
         """
-        for column_name, counter in self._counters:
+        for column_name, counter in self._counters.items():
+            count, min_max_tup, mean, unbiased_var, skew, kurt = scistats.describe(frame[[column_name]].values)
+            stats_counter = StatCounter()
+            stats_counter.n = count
+            stats_counter.mu = mean
+            stats_counter.m2 = (count - 1) * unbiased_var # only save the numerator of unbiased var
+            stats_counter.minValue, stats_counter.maxValue = min_max_tup
             try:
-                count, min_max_tup, var, skew, kurt = scistats.describe(frame[[column_name]].values)
+                 self._counters[column_name] = self._counters[column_name].mergeStats(stats_counter)
             except KeyError:
                 raise KeyError # and stuff
 
 
-    def merge_pstats(self, other):
-        """
-        Merge all of the stats counters of the other PStatCounter with our counters
-        """
-        if not isinstance(other, PStatCounter):
-            raise Exception("Can only merge PStatcounters!")
-
-        for column, counter in self._counters.items():
-            other_counter = other._counters.get(column)
-            self._counters[column] = counter.mergeStats(other_counter)
-
-        return self
 
     def __str__(self):
         str = ""

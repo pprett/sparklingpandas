@@ -19,10 +19,10 @@ import pandas
 import nose.tools as nose_tools
 
 def test_pstatcounter():
-    from pandaspark.pstatcounter import PStatCounter
+    from pandaspark.col_stat_counters import ColumnStatCounters
     input = [("magic", 10), ("ninja", 20), ("coffee", 30)]
     df = pandas.DataFrame(data = input, columns = ['a', 'b'])
-    counter = PStatCounter([df], columns=['b'])
+    counter = ColumnStatCounters([df], columns=['b'])
     b_col_stat_counter = counter._column_stats['b']
     assert b_col_stat_counter.count() == 3
     assert b_col_stat_counter.mean() == 20.0

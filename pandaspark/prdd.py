@@ -23,7 +23,7 @@ add_pyspark_path()
 from pyspark.join import python_join, python_left_outer_join, \
     python_right_outer_join, python_cogroup
 from pyspark.rdd import RDD
-from pandaspark.pstatcounter import PStatCounter
+from pandaspark.col_stat_counters import ColumnStatCounters
 import pandas
 
 class PRDD:
@@ -94,9 +94,10 @@ class PRDD:
         '(field: b,  counters: (count: 3, mean: 20.0, stdev: 8.16496580928, max: 30, min: 10))'
         """
         def reduceFunc(sc1, sc2):
-            return sc1.merge(sc2)
+            print sc1
+            return sc1.merge_stats(sc2)
 
-        return self._rdd.mapPartitions(lambda i: [PStatCounter(dataframes = i, columns = columns)]).reduce(reduceFunc)
+        return self._rdd.mapPartitions(lambda i: [ColumnStatCounters(dataframes = i, columns = columns)]).reduce(reduceFunc)
 
 if __name__ == "__main__":
     run_tests()

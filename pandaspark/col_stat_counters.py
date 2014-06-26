@@ -20,13 +20,12 @@ Look at the stats() method on PRDD for more info.
 #
 
 from pandaspark.utils import add_pyspark_path, run_tests
-import pandas
 import scipy.stats as scistats
 add_pyspark_path()
 
 from pyspark.statcounter import StatCounter
 
-class PStatCounter(object):
+class ColumnStatCounters(object):
     """
     A wrapper around StatCounter which collects stats for multiple columns
     """
@@ -48,7 +47,10 @@ class PStatCounter(object):
 
     def merge(self, frame):
         """
-        Add another DataFrame to the PStatCounter
+        Add another DataFrame to the accumulated stats for each column.
+        Parameters
+        ----------
+        frame: pandas DataFrame we will update our stats counter with.
         """
         for column_name, counter in self._column_stats.items():
             count, min_max_tup, mean, unbiased_var, skew, kurt = scistats.describe(frame[[column_name]].values)
@@ -58,6 +60,19 @@ class PStatCounter(object):
             stats_counter.m2 = (count - 1) * unbiased_var # only save the numerator of unbiased var
             stats_counter.minValue, stats_counter.maxValue = min_max_tup
             self._column_stats[column_name] = self._column_stats[column_name].mergeStats(stats_counter)
+        return self
+
+    def merge_stats(self, other_col_counters):
+        """
+        Merge statistics from a different column stats counter in to this one.
+        Parameters
+        ----------
+        other_column_counters: Other col_stat_counter to marge in to this one.
+        """
+        for column_name, counter in self._column_stats.items():
+            self._column_stats[column_name] = self._column_stats[column_name]\
+                    .mergeStats(other_col_counters._column_stats[column_name])
+        return self
 
 
     def __str__(self):

@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -17,31 +15,20 @@
 # limitations under the License.
 #
 
-FAILED=0
+from pandaspark.utils import add_pyspark_path
+add_pyspark_path()
+import nose.tools as nose_tools
+from pandaspark.test.pandasparktestcase import PandaSparkTestCase
 
-rm -f unit-tests.log
 
-function run_test() {
-    python $1 2>&1 | tee -a  unit-tests.log
-    FAILED=$((PIPESTATUS[0]||$FAILED))
-
-    # Fail and exit on the first test failure.
-    if [[ $FAILED != 0 ]]; then
-        cat unit-tests.log | grep -v "^[0-9][0-9]*" # filter all lines starting with a number.
-        echo -en "\033[31m"  # Red
-        echo "Had test failures; see logs."
-        echo -en "\033[0m"  # No color
-        exit -1
-    fi
-
-}
-
-run_test "./pandaspark/pcontext.py"
-run_test "./pandaspark/prdd.py"
-run_test "./pandaspark/test/dataloadtests.py"
-
-if [[ $FAILED == 0 ]]; then
-    echo -en "\033[32m"  # Green
-    echo "Tests passed."
-    echo -en "\033[0m"  # No color
-fi
+class TestPrdd(PandaSparkTestCase):
+    def test_prdd_stats(self):
+        input = [("magic", 10), ("ninja", 20), ("coffee", 30)]
+        prdd = self.psc.DataFrame(input, columns=['a', 'b'])
+        stats = prdd.stats(columns=['b'])
+        b_col_stat_counter = stats._column_stats['b']
+        assert b_col_stat_counter.count() == 3
+        assert b_col_stat_counter.mean() == 20.0
+        assert b_col_stat_counter.max() == 30
+        assert b_col_stat_counter.min() == 10
+        nose_tools.assert_almost_equal(b_col_stat_counter.stdev(), 8.16496580928)

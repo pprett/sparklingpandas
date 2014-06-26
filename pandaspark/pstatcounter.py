@@ -40,7 +40,7 @@ class PStatCounter(object):
         dataframes: list of dataframes, containing the values to compute stats on
         columns: list of strs, list of columns to compute the stats on
         """
-        self._counters = {column_name: StatCounter() for column_name in columns}
+        self._column_stats = {column_name: StatCounter() for column_name in columns}
  
         for df in dataframes:
             self.merge(df)
@@ -49,30 +49,20 @@ class PStatCounter(object):
     def merge(self, frame):
         """
         Add another DataFrame to the PStatCounter
-        >>> import pandas
-        >>> from pandaspark.pstatcounter import PStatCounter
-        >>> input = [("magic", 10), ("ninja", 20), ("coffee", 30)]
-        >>> df = pandas.DataFrame(data = input, columns = ['a', 'b'])
-        >>> PStatCounter([df], columns=['b'])
-        (field: b,  counters: (count: 3, mean: 20.0, stdev: 8.16496580928, max: 30, min: 10))
         """
-        for column_name, counter in self._counters.items():
+        for column_name, counter in self._column_stats.items():
             count, min_max_tup, mean, unbiased_var, skew, kurt = scistats.describe(frame[[column_name]].values)
             stats_counter = StatCounter()
             stats_counter.n = count
             stats_counter.mu = mean
             stats_counter.m2 = (count - 1) * unbiased_var # only save the numerator of unbiased var
             stats_counter.minValue, stats_counter.maxValue = min_max_tup
-            try:
-                 self._counters[column_name] = self._counters[column_name].mergeStats(stats_counter)
-            except KeyError:
-                raise KeyError # and stuff
-
+            self._column_stats[column_name] = self._column_stats[column_name].mergeStats(stats_counter)
 
 
     def __str__(self):
         str = ""
-        for column, counter in self._counters.items():
+        for column, counter in self._column_stats.items():
             str += "(field: %s,  counters: %s)" % (column, counter)
         return str
 

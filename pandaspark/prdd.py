@@ -94,7 +94,7 @@ class PRDD:
         '(field: b,  counters: (count: 3, mean: 20.0, stdev: 8.16496580928, max: 30, min: 10))'
         """
         def reduceFunc(sc1, sc2):
-            return sc1.merge_pstats(sc2)
+            return sc1.merge(sc2)
 
         return self._rdd.mapPartitions(lambda i: [PStatCounter(dataframes = i, columns = columns)]).reduce(reduceFunc)
 

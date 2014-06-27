@@ -70,6 +70,9 @@ class ColumnStatCounters(object):
         other_column_counters: Other col_stat_counter to marge in to this one.
         """
         for column_name, counter in self._column_stats.items():
+            print "XXXXXXXX Merging column stats where std1 is {0} and std2 is {1}".format(self._column_stats[column_name].stdev(),
+                                                                other_col_counters._column_stats[column_name].stdev())
+            #TODO(juliet): ensure that merging stats counters holding info for only one var correctly agg.
             self._column_stats[column_name] = self._column_stats[column_name]\
                     .mergeStats(other_col_counters._column_stats[column_name])
         return self

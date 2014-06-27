@@ -69,7 +69,7 @@ class PRDD:
 
     def collect(self):
         """
-        Collect the elements in an PRDD and concatenate the partition
+        Collect the elements in an PRDD and concatenate the partition.
 
         >>> input = [("tea", "happy"), ("water", "sad"), ("coffee", "happiest")]
         >>> prdd = psc.DataFrame(input, columns=['magic', 'thing'])
@@ -86,12 +86,7 @@ class PRDD:
         Compute the stats for each column provided in columns.
         Parameters
         ----------
-        columns : list of str, contains all comuns for which to compute stats on
-        >>> input = [("magic", 10), ("ninja", 20), ("coffee", 30)]
-        >>> prdd = psc.DataFrame(input, columns=['a', 'b'])
-        >>> stats = prdd.stats(columns=['b'])
-        >>> str(stats)
-        '(field: b,  counters: (count: 3, mean: 20.0, stdev: 8.16496580928, max: 30, min: 10))'
+        columns : list of str, contains all columns for which to compute stats on
         """
         def reduceFunc(sc1, sc2):
             print sc1

@@ -21,6 +21,7 @@ Look at the stats() method on PRDD for more info.
 
 from pandaspark.utils import add_pyspark_path, run_tests
 import scipy.stats as scistats
+import numpy as np
 add_pyspark_path()
 
 from pyspark.statcounter import StatCounter
@@ -53,12 +54,17 @@ class ColumnStatCounters(object):
         frame: pandas DataFrame we will update our stats counter with.
         """
         for column_name, counter in self._column_stats.items():
-            count, min_max_tup, mean, unbiased_var, skew, kurt = scistats.describe(frame[[column_name]].values)
+            data_arr = frame[[column_name]].values
+            count, min_max_tup, mean, unbiased_var, skew, kurt = scistats.describe(data_arr)
             stats_counter = StatCounter()
             stats_counter.n = count
             stats_counter.mu = mean
-            stats_counter.m2 = (count - 1) * unbiased_var # only save the numerator of unbiased var
+            #TODO(juliet): look up paper they base their streams tat alg on, write docs for statcounter class in spark
+            # line below will likely need to be modified to match the alg
+            stats_counter.m2 = np.sum((data_arr - mean) ** 2) # only save the numerator of unbiased var
             stats_counter.minValue, stats_counter.maxValue = min_max_tup
+            #print "XXXXXXXX Merging column stats where self is {0} and other is {1}".format(self._column_stats[column_name],
+            #                                                    stats_counter)
             self._column_stats[column_name] = self._column_stats[column_name].mergeStats(stats_counter)
         return self
 
@@ -70,8 +76,6 @@ class ColumnStatCounters(object):
         other_column_counters: Other col_stat_counter to marge in to this one.
         """
         for column_name, counter in self._column_stats.items():
-            print "XXXXXXXX Merging column stats where std1 is {0} and std2 is {1}".format(self._column_stats[column_name].stdev(),
-                                                                other_col_counters._column_stats[column_name].stdev())
             #TODO(juliet): ensure that merging stats counters holding info for only one var correctly agg.
             self._column_stats[column_name] = self._column_stats[column_name]\
                     .mergeStats(other_col_counters._column_stats[column_name])

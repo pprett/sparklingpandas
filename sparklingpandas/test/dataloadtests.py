@@ -48,14 +48,14 @@ class DataLoad(SparklingPandasTestCase):
             ['magic'])
         assert_frame_equal(data, expected)
 
-    def test_from_csv_record_whole_file(self):
+    def test_from_csv_record(self, whole_file=False):
         x = "hi,i,like,coffee\n"
         temp_file = NamedTemporaryFile()
         temp_file.write(x)
         temp_file.flush()
-        data = self.psc.csvfile("file://" + temp_file.name,
-                                use_whole_file=True,
-                                names=["1", "2", "3", "4"]).collect()
+        data = self.psc.read_csv("file://" + temp_file.name,
+                                 use_whole_file=whole_file,
+                                 names=["1", "2", "3", "4"]).collect()
         expected = pandas.read_csv(
             temp_file.name,
             names=[
@@ -76,6 +76,25 @@ class DataLoad(SparklingPandasTestCase):
         ddf = self.psc.from_data_frame(df)
         ddfc = ddf.collect()
         assert_frame_equal(ddfc, df)
+
+    def test_from_csv_record_whole_file(self):
+        self.test_from_csv_record(True)
+
+    def test_from_csv_record_adv(self, whole_file=False):
+        x = "person,coffee,tea\nholden,20,2\npanda,1,1"
+        temp_file = NamedTemporaryFile()
+        temp_file.write(x)
+        temp_file.flush()
+        data = self.psc.read_csv("file://" + temp_file.name,
+                                 use_whole_file=whole_file,
+                                 ).collect()
+        # Reset the index for comparision.
+        data = data.reset_index(drop=True)
+        expected = pandas.read_csv(temp_file.name)
+        assert_frame_equal(expected, data)
+
+    def test_from_csv_record_adv_whole_file(self):
+        self.test_from_csv_record_adv(True)
 
 if __name__ == "__main__":
     unittest2.main()

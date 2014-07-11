@@ -61,6 +61,12 @@ class PRDD:
         """
         return self.fromRDD(self._rdd.map(lambda x: x[key]))
 
+    def dropna(self, *args, **kwargs):
+        """Return object with labels on given axis omitted where alternately
+        any or all of the data are missing. Takes the same params as DataFrame
+        dropna function."""
+        return self.fromRDD(self._rdd.map(lambda x: x.dropna(*args, **kwargs)))
+
     def collect(self):
         """
         Collect the elements in an PRDD and concatenate the partition.

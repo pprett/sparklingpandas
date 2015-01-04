@@ -20,14 +20,10 @@ from sparklingpandas.utils import add_pyspark_path
 from functools import reduce
 
 add_pyspark_path()
-from pyspark.join import python_join, python_left_outer_join, \
-    python_right_outer_join, python_cogroup
-from pyspark.rdd import RDD
 from sparklingpandas.pstatcounter import PStatCounter
-import pandas
 
 
-class PRDD:
+class PRDD(object):
 
     """A Panda Resilient Distributed Dataset (PRDD), is an extension of the RDD.
     It is an RDD containing Panda dataframes and provides special methods that
@@ -43,6 +39,9 @@ class PRDD:
         """Construct a PRDD from an RDD. No checking or validation occurs."""
         return PRDD(rdd)
 
+    def asrdd(self):
+        return self._rdd
+
     def to_spark_sql(self):
         """A Sparkling Pandas specific function to turn a DDF into
         something that Spark SQL can query. To use the result you will
@@ -54,11 +53,66 @@ class PRDD:
             return map((lambda x: x[1].to_dict()), frame.iterrows())
         return self._rdd.flatMap(frame_to_spark_sql)
 
-    def applymap(self, f, **kwargs):
+    def applymap(self, f, preserves_partitioning=False, **kwargs):
         """Return a new PRDD by applying a function to each element of each
-        Panda DataFrame."""
+        Panda DataFrame.
+
+        Parameters
+        ----------
+        f : func
+            Function applied to each element (ie cell) of each DataFrame and
+            returns a scalar.
+            Might take optional keyword arguments.
+        preserves_partitioning : bool (default: False)
+            Whether or not partitioning is preserved.
+        kwargs : dict
+            Optional keyword arguments are passed to :meth:`DataFrame.applymap`.
+
+        Returns
+        -------
+        prdd : PRDD
+            The new PRDD after the transformation.
+
+        """
         return self.fromRDD(
-            self._rdd.map(lambda data: data.applymap(f), **kwargs))
+            self._rdd.map(lambda data: data.applymap(f, **kwargs),
+                          preservesPartitioning=preserves_partitioning))
+
+    def apply_dataframe(self, f, preserves_partitioning=False, flat_map=False,
+                        args=tuple(), kwargs={}):
+        """Applies ``f`` to each data frame in the PRDD.
+
+        Parameters
+        ----------
+        f : func
+            Function applied to each DataFrame that returns an arbitrary object.
+            Might take optional keyword arguments.
+        preservesPartitioning : bool (default: False)
+            Whether or not partitioning is preserved.
+        flatMap : bool (default: False)
+            Whether or not a flat map should be performed. Use this
+            if ``f`` returns a sequence of objects and the resulting
+            RDD should not be an RDD of sequences but an RDD of objects.
+        args : tuple
+            Optional positional arguments passed to ``f``.
+        kwargs : dict
+            Optional keyword arguments are passed to ``f``.
+
+        Returns
+        -------
+        prdd : PRDD
+            The new PRDD after the transformation.
+
+        """
+        partial_func = lambda df: f(df, *args, **kwargs)
+        if flat_map:
+            rdd = self._rdd.flatMap(partial_func,
+                                    preservesPartitioning=preserves_partitioning)
+        else:
+            rdd = self._rdd.map(partial_func,
+                                preservesPartitioning=preserves_partitioning)
+
+        return self.fromRDD(rdd)
 
     def __getitem__(self, key):
         """Returns a new PRDD of elements from that key."""
@@ -114,44 +168,26 @@ class PRDD:
                 .reduce(lambda xy, ab: (xy[0] + ab[0], xy[1])))
 
     @property
-    def dtypes(self):
+    def columns(self):
+        """Column labels.
+
+        Column labels are peeked from the first partition.
         """
-        Return the dtypes associated with this object
-        Uses the types from the first frame.
-        """
-        return self._rdd.first().dtypes
+        return self._rdd.first().columns
 
     @property
-    def ftypes(self):
-        """
-        Return the ftypes associated with this object
-        Uses the types from the first frame.
-        """
-        return self._rdd.first().ftypes
+    def index(self):
+        """Row labels (aka index).
 
-    def get_dtype_counts(self):
-        """
-        Return the counts of dtypes in this object
-        Uses the information from the first frame
-        """
-        return self._rdd.first().get_dtype_counts()
+        Ordering is arbitrary. If the PRDD is created without
+        index column then indices will contain dublicates; as many
+        as the number of partitions.
 
-    def get_ftype_counts(self):
+        Row indices are reduced from all partitions.
         """
-        Return the counts of ftypes in this object
-        Uses the information from the first frame
-        """
-        return self._rdd.first().get_ftype_counts()
-
-    @property
-    def axes(self):
-        return (self._rdd.map(lambda frame: frame.axes)
-                .reduce(lambda xy, ab: [xy[0].append(ab[0]), xy[1]]))
-
-    @property
-    def shape(self):
-        return (self._rdd.map(lambda frame: frame.shape)
-                .reduce(lambda xy, ab: (xy[0] + ab[0], xy[1])))
+        return (self._rdd.map(lambda frame: frame.index)
+                .reduce(lambda index_a, index_b: index_a.__class__(
+                    index_a.tolist() + index_b.tolist())))
 
     def collect(self):
         """Collect the elements in an PRDD and concatenate the partition."""
